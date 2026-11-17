@@ -7,6 +7,7 @@ import re
 from datetime import datetime, timezone
 
 from worklog import config, frontmatter, gitops
+from worklog.describe import describe as describe_with_claude
 from worklog.render import fallback_description, prompts_hash, render_session, session_relpath
 from worklog.transcript import is_loggable, read_entries
 
@@ -61,6 +62,11 @@ def _sync(home_dir, dry_run, no_push, since, out, tz, describe, log):
     if not vault or not machine or not os.path.isdir(vault):
         log.error("vault_path or machine is not configured")
         return
+    if describe is None and settings["claude_bin"]:
+
+        def describe(entries):
+            return describe_with_claude(entries, settings, config.scratch(home_dir))
+
     state = config.load_state(home_dir)
     records = state["transcripts"]
     since_time = datetime.strptime(since, "%Y-%m-%d").timestamp() if since else None
