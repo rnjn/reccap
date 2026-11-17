@@ -33,3 +33,13 @@ class CliTest(SandboxTest):
         result = self.run_cli()
         self.assertEqual(result.returncode, 2)
         self.assertIn("usage: worklog", result.stderr)
+
+    def test_day_writes_the_page_for_the_given_date(self):
+        self.laptop.add_transcript(basic_lines())
+        result = self.run_cli("day", "2026-11-14", "--no-push")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), self.laptop.path("daily/2026-11-14.md"))
+        self.assertIn("- 09:12-09:13 · [Add backoff.]", self.laptop.read("daily/2026-11-14.md"))
+
+    def test_day_rejects_a_bad_date(self):
+        self.assertEqual(self.run_cli("day", "14-11-2026").returncode, 2)
