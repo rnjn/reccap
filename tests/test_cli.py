@@ -43,3 +43,17 @@ class CliTest(SandboxTest):
 
     def test_day_rejects_a_bad_date(self):
         self.assertEqual(self.run_cli("day", "14-11-2026").returncode, 2)
+
+    def test_doctor_names_the_failing_checks_and_exits_non_zero(self):
+        result = self.run_cli("doctor")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PASS vault remote", result.stdout)
+        self.assertIn("FAIL claude", result.stdout)
+
+    def test_install_requires_a_vault(self):
+        self.assertEqual(self.run_cli("install").returncode, 2)
+
+    def test_help_lists_every_command(self):
+        result = self.run_cli("--help")
+        for name in ("install", "sync", "day", "doctor", "uninstall"):
+            self.assertIn(name, result.stdout)

@@ -40,8 +40,7 @@ def build_input(entries):
     return SEPARATOR.join(pieces)
 
 
-def describe(entries, settings, scratch_dir):
-    fallback = (fallback_description(entries), "fallback")
+def ask(settings, scratch_dir, text):
     command = [settings["claude_bin"], "-p", "--no-session-persistence", "--tools", ""]
     if settings.get("describe_model"):
         command += ["--model", settings["describe_model"]]
@@ -49,18 +48,23 @@ def describe(entries, settings, scratch_dir):
         result = subprocess.run(
             command,
             check=False,
-            input=INSTRUCTION + "\n\n<session>\n" + build_input(entries) + "\n</session>\n",
+            input=text,
             cwd=scratch_dir,
             capture_output=True,
             text=True,
             timeout=settings.get("describe_timeout_seconds") or 60,
         )
-    except (OSError, subprocess.TimeoutExpired):
-        return fallback
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return None, str(error)
     if result.returncode:
-        return fallback
-    line = clean(result.stdout)
-    return (line, "model") if line else fallback
+        return None, (result.stderr or result.stdout).strip()[-200:] or f"exit {result.returncode}"
+    return result.stdout, None
+
+
+def describe(entries, settings, scratch_dir):
+    reply, _ = ask(settings, scratch_dir, INSTRUCTION + "\n\n<session>\n" + build_input(entries) + "\n</session>\n")
+    line = clean(reply or "")
+    return (line, "model") if line else (fallback_description(entries), "fallback")
 
 
 def clean(reply):

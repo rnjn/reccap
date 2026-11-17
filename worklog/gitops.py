@@ -27,7 +27,7 @@ def commit(vault, git_bin, paths, message):
 
 def sync_remote(vault, git_bin, push=True):
     branch = git(vault, git_bin, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
-    remote = (git(vault, git_bin, "remote").stdout.split() or [None])[0]
+    remote = first_remote(vault, git_bin)
     if not remote or branch in ("", "HEAD"):
         return "no remote or branch to sync with"
     error = "push rejected"
@@ -50,15 +50,23 @@ def sync_remote(vault, git_bin, push=True):
     return error
 
 
-def has_unpushed(vault, git_bin):
-    if git(vault, git_bin, "rev-parse", "-q", "--verify", "HEAD").returncode:
-        return False
+def first_remote(vault, git_bin):
+    return (git(vault, git_bin, "remote").stdout.split() or [None])[0]
+
+
+def upstream_ref(vault, git_bin):
     branch = git(vault, git_bin, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
-    remote = (git(vault, git_bin, "remote").stdout.split() or [None])[0]
-    if not remote:
-        return False
-    upstream = f"refs/remotes/{remote}/{branch}"
+    upstream = f"refs/remotes/{first_remote(vault, git_bin)}/{branch}"
     if git(vault, git_bin, "rev-parse", "-q", "--verify", upstream).returncode:
+        return None
+    return upstream
+
+
+def has_unpushed(vault, git_bin):
+    if git(vault, git_bin, "rev-parse", "-q", "--verify", "HEAD").returncode or not first_remote(vault, git_bin):
+        return False
+    upstream = upstream_ref(vault, git_bin)
+    if not upstream:
         return True
     count = git(vault, git_bin, "rev-list", "--count", f"{upstream}..HEAD").stdout.strip()
     return count not in ("", "0")
