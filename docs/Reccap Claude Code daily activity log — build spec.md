@@ -50,14 +50,14 @@ The vault root is the git repo root. Reccap owns two folders in it and touches n
   daily/
     2026-11-14.md
   sessions/
-    <machine>/
-      2026-11/
-        2026-11-14-550e8400.md
+    2026-11/
+      14/
+        0912-retry-backoff-fix.md
 ```
 
 - **`daily/<YYYY-MM-DD>.md`** is the day page. Only `reccap day` writes here.
-- **`sessions/<machine>/<YYYY-MM>/<start-date>-<id8>.md`** is one session. `<start-date>` is the local date of the session's first entry and `<id8>` is the first 8 characters of the session ID. The name never changes after creation, so links stay valid. Only `reccap sync` on that machine writes here.
-- **`.gitignore`** must contain `.obsidian/workspace*.json` and `.trash/`. The installer adds these lines if they are missing.
+- **`sessions/<YYYY-MM>/<DD>/<HHMM>-<name>.md`** is one session, from any machine. The folders and `<HHMM>` are the local date and time of the session's first entry. `<name>` is a short slug of the Claude Code session name (the custom title if set, otherwise the automatic one), or of the description when the session has no name. If that path is already taken, the first 8 characters of the session ID are appended. The name never changes after creation, so links stay valid. Each machine writes only its own sessions' files, and the machine is recorded in the frontmatter.
+- **`.gitignore`** must contain `.obsidian/` and `.trash/`. The installer adds these lines if they are missing.
 
 Each machine also keeps local state outside the vault, in `~/.reccap/`:
 
@@ -123,7 +123,7 @@ Redaction is a best-effort pattern scrub and will miss secrets it has no pattern
 
 ### Git protocol
 
-- Stage only `sessions/<machine>/`. Never run `git add -A`, because the vault may hold unrelated uncommitted notes.
+- Stage only `sessions/`. Files there that are not yet committed can only have been written by this machine. Never run `git add -A`, because the vault may hold unrelated uncommitted notes.
 - If nothing is staged, stop here.
 - Commit with the message `reccap: <machine> <UTC timestamp>`.
 - Run `git pull --rebase --autostash`, then `git push`. If the push is rejected, repeat the pull and push up to 3 times.
@@ -224,14 +224,14 @@ machines: [devbox, laptop]
 
 ### infra
 
-- 14:05-14:50 · [Rotate the staging database credentials](../sessions/devbox/2026-11/2026-11-14-9b1c22aa.md#2026-11-14) · `main` · 6 prompts
+- 14:05-14:50 · [Rotate the staging database credentials](../sessions/2026-11/14/1405-staging-credential-rotation.md#2026-11-14) · `main` · 6 prompts
 
 ## laptop
 
 ### payments-api
 
-- 09:12-17:40 · [Fix retry backoff in the webhook sender](../sessions/laptop/2026-11/2026-11-14-550e8400.md#2026-11-14) · `fix/retry-backoff` · 23 prompts
-- 11:30-11:42 · [Explain the idempotency key design](../sessions/laptop/2026-11/2026-11-13-03fe7c10.md#2026-11-14) · `main` · 3 prompts · started 2026-11-13
+- 09:12-17:40 · [Fix retry backoff in the webhook sender](../sessions/2026-11/14/0912-retry-backoff-fix.md#2026-11-14) · `fix/retry-backoff` · 23 prompts
+- 11:30-11:42 · [Explain the idempotency key design](../sessions/2026-11/13/1600-idempotency-key-design.md#2026-11-14) · `main` · 3 prompts · started 2026-11-13
 
 Last sync: devbox 2026-11-14 19:02 · laptop 2026-11-15 08:55
 <!-- reccap:end -->
@@ -286,7 +286,7 @@ Reccap's source lives in its own repo, separate from the vault. Each machine clo
 2. If `vault_path` does not exist and `--repo-url` is given, clone it. Otherwise confirm the path is a git repo with a remote.
 3. Create `~/.reccap/` with `config.json` and `scratch/`.
 4. Add the required `.gitignore` lines to the vault if missing.
-5. Fail with a clear message if `sessions/<machine>/` already exists in the repo while this machine has no `state.json`, which suggests the machine name is taken. Proceed only with `--force`.
+5. Fail with a clear message if a session file with this machine's name in its frontmatter already exists in the repo while this machine has no `state.json`, which suggests the machine name is taken. Proceed only with `--force`.
 6. Install the schedule for `reccap sync`.
 7. Run `reccap doctor`.
 

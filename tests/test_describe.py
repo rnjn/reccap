@@ -10,6 +10,7 @@ from tests.sandbox import SESSION_PATH, SandboxTest, basic_lines
 
 FAKE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_claude.py")
 REPLY = "Fix retry backoff in the webhook sender"
+MODEL_PATH = "sessions/2026-11/14/0912-fix-retry-backoff-in-the-webhook-sender.md"
 
 
 def entries_of(*lines):
@@ -35,8 +36,8 @@ class FakeClaudeTest(SandboxTest):
         with open(self.calls_path) as f:
             return [json.loads(line) for line in f]
 
-    def meta(self):
-        return frontmatter.parse(self.laptop.read(SESSION_PATH))[0]
+    def meta(self, relpath=MODEL_PATH):
+        return frontmatter.parse(self.laptop.read(relpath))[0]
 
 
 class BuildInputTest(FakeClaudeTest):
@@ -115,7 +116,7 @@ class SyncDescribeTest(FakeClaudeTest):
         self.laptop.sync()
         meta = self.meta()
         self.assertEqual((meta["description"], meta["description_source"]), (REPLY, "model"))
-        self.assertIn("# " + REPLY + "\n", self.laptop.read(SESSION_PATH))
+        self.assertIn("# " + REPLY + "\n", self.laptop.read(MODEL_PATH))
         self.assertEqual(self.calls()[0]["cwd"], os.path.realpath(os.path.join(self.laptop.home, "scratch")))
 
     def test_description_is_cached_until_a_new_prompt_arrives(self):
@@ -123,7 +124,7 @@ class SyncDescribeTest(FakeClaudeTest):
         self.laptop.sync()
         self.touch([*basic_lines(), assistant("2026-11-14T03:50:00Z", text("One more thing."))], 2000000000)
         self.laptop.sync()
-        self.assertIn("One more thing.", self.laptop.read(SESSION_PATH))
+        self.assertIn("One more thing.", self.laptop.read(MODEL_PATH))
         self.assertEqual(len(self.calls()), 1)
         self.touch([*basic_lines(), user("2026-11-14T04:00:00Z", "Add jitter too.")], 2000000100)
         self.laptop.sync()
@@ -133,11 +134,13 @@ class SyncDescribeTest(FakeClaudeTest):
         self.set_env("FAKE_CLAUDE_MODE", "fail")
         self.laptop.add_transcript(basic_lines())
         self.laptop.sync()
-        self.assertEqual(self.meta()["description_source"], "fallback")
+        self.assertEqual(self.meta(SESSION_PATH)["description_source"], "fallback")
         self.assertIn(SESSION_PATH, self.origin_files())
         self.set_env("FAKE_CLAUDE_MODE", "ok")
         self.laptop.sync()
-        self.assertEqual((self.meta()["description"], self.meta()["description_source"]), (REPLY, "model"))
+        meta = self.meta(SESSION_PATH)
+        self.assertEqual((meta["description"], meta["description_source"]), (REPLY, "model"))
+        self.assertFalse(os.path.exists(self.laptop.path(MODEL_PATH)))
 
     def test_model_description_is_not_requested_again_when_nothing_changed(self):
         self.laptop.add_transcript(basic_lines())

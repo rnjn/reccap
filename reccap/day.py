@@ -30,11 +30,11 @@ def run_day(home_dir, day=None, no_pull=False, no_push=False, no_sync=False, ope
         error = gitops.sync_remote(vault, git_bin, push=False)
         if error:
             out(f"warning: pull failed, using local data ({error})")
-    sessions = _sessions(vault, day)
+    sessions, machines = _sessions(vault, day)
     relpath = f"daily/{day}.md"
     target = os.path.join(vault, relpath)
     existing = _read(target)
-    content = _page(existing, day, sessions, _block(sessions, day, _last_sync(vault, git_bin, tz)))
+    content = _page(existing, day, sessions, _block(sessions, day, _last_sync(vault, git_bin, tz, machines)))
     if content != existing:
         config.write_atomic(target, content)
     committed = gitops.commit(vault, git_bin, [relpath], f"reccap: day {day}")
@@ -50,8 +50,10 @@ def run_day(home_dir, day=None, no_pull=False, no_push=False, no_sync=False, ope
 
 def _sessions(vault, day):
     found = []
+    machines = set()
     for path in sorted(glob.glob(os.path.join(vault, "sessions", "*", "*", "*.md"))):
         meta, body = frontmatter.parse(_read(path) or "")
+        machines.add(meta.get("machine") or "unknown")
         if day not in meta.get("active_dates", []):
             continue
         times, prompts = _section(body, day)
@@ -59,7 +61,7 @@ def _sessions(vault, day):
             continue
         found.append(
             {
-                "machine": meta.get("machine") or os.path.relpath(path, vault).split(os.sep)[1],
+                "machine": meta.get("machine") or "unknown",
                 "repo": meta.get("repo") or "unknown",
                 "first": times[0],
                 "last": times[-1],
@@ -70,7 +72,7 @@ def _sessions(vault, day):
                 "link": "../" + "/".join(os.path.relpath(path, vault).split(os.sep)) + "#" + day,
             }
         )
-    return sorted(found, key=lambda s: (s["machine"], s["repo"], s["first"], s["link"]))
+    return sorted(found, key=lambda s: (s["machine"], s["repo"], s["first"], s["link"])), sorted(machines)
 
 
 def _section(body, day):
@@ -115,11 +117,10 @@ def _block(sessions, day, last_sync):
     return "\n".join([START, *lines, END])
 
 
-def _last_sync(vault, git_bin, tz):
+def _last_sync(vault, git_bin, tz, machines):
     entries = []
-    for folder in sorted(glob.glob(os.path.join(vault, "sessions", "*", ""))):
-        machine = os.path.basename(folder.rstrip(os.sep))
-        stamp = gitops.git(vault, git_bin, "log", "-1", "--format=%cI", "--", f"sessions/{machine}").stdout.strip()
+    for machine in machines:
+        stamp = gitops.git(vault, git_bin, "log", "-1", "--format=%cI", f"--grep=^reccap: {machine} ").stdout.strip()
         if stamp:
             local = datetime.fromisoformat(stamp).astimezone(tz)
             entries.append(f"{machine} {local.strftime('%Y-%m-%d %H:%M')}")

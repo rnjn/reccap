@@ -37,14 +37,14 @@ class DayTest(SandboxTest):
 
     def add_session(self, machine, when, repo, sid, branch, description, days):
         start = next(iter(days))
-        relpath = f"sessions/{machine.name}/{start[:7]}/{start}-{sid[:8]}.md"
+        relpath = f"sessions/{start[:7]}/{start[8:]}/{days[start][0].replace(':', '')}-{sid[:8]}.md"
         os.makedirs(os.path.dirname(machine.path(relpath)), exist_ok=True)
         with open(machine.path(relpath), "w") as f:
             f.write(session_text(machine.name, repo, sid, branch, description, days))
         git(machine.vault, "add", "sessions")
         os.environ["GIT_COMMITTER_DATE"] = when
         self.addCleanup(os.environ.pop, "GIT_COMMITTER_DATE", None)
-        git(machine.vault, "commit", "-q", "-m", "sessions")
+        git(machine.vault, "commit", "-q", "-m", f"reccap: {machine.name} 2026-11-14T00:00:00Z")
         git(machine.vault, "pull", "-q", "--rebase", "origin", "main")
         git(machine.vault, "push", "-q", "origin", "main")
         os.environ.pop("GIT_COMMITTER_DATE")
@@ -97,7 +97,7 @@ class DayTest(SandboxTest):
         self.day("2026-11-15")
         page = self.laptop.read("daily/2026-11-15.md")
         self.assertIn(
-            "- 10:00-10:02 · [Fix retry backoff in the webhook sender](../sessions/laptop/2026-11/2026-11-14-550e8400.md#2026-11-15)"
+            "- 10:00-10:02 · [Fix retry backoff in the webhook sender](../sessions/2026-11/14/0912-550e8400.md#2026-11-15)"
             " · `fix/retry-backoff` · 1 prompt · started 2026-11-14\n",
             page,
         )
@@ -170,7 +170,7 @@ class DayTest(SandboxTest):
     def test_day_syncs_this_machine_first(self):
         self.laptop.add_transcript(basic_lines())
         self.day(no_sync=False)
-        self.assertIn("[Add backoff.](../sessions/laptop/2026-11/2026-11-14-550e8400.md#2026-11-14)", self.laptop.read(DAY))
+        self.assertIn("[Add backoff.](../sessions/2026-11/14/0912-add-backoff.md#2026-11-14)", self.laptop.read(DAY))
 
     def test_open_uses_an_obsidian_url(self):
         opened = []

@@ -49,7 +49,7 @@ class InstallTest(SandboxTest):
         self.assertEqual((settings["vault_path"], settings["machine"]), (self.laptop.vault, "newbox"))
         self.assertEqual((settings["git_bin"], settings["claude_bin"]), (GIT, FAKE))
         self.assertTrue(os.path.isdir(os.path.join(self.home, "scratch")))
-        self.assertEqual(self.laptop.read(".gitignore"), ".obsidian/workspace*.json\n.trash/\n")
+        self.assertEqual(self.laptop.read(".gitignore"), ".obsidian/\n.trash/\n")
         self.assertEqual(self.scheduler.installed, [(self.home, 60)])
         self.assertTrue(any(line.startswith("PASS") for line in self.lines))
 
@@ -58,7 +58,7 @@ class InstallTest(SandboxTest):
             f.write("*.tmp\n.trash/")
         self.install()
         self.install()
-        self.assertEqual(self.laptop.read(".gitignore"), "*.tmp\n.trash/\n.obsidian/workspace*.json\n")
+        self.assertEqual(self.laptop.read(".gitignore"), "*.tmp\n.trash/\n.obsidian/\n")
 
     def test_reinstall_keeps_existing_settings(self):
         self.install()
@@ -92,7 +92,7 @@ class InstallTest(SandboxTest):
     def test_taken_machine_name_needs_force(self):
         self.laptop.sync()
         self.assertEqual(self.install(machine="laptop"), 1)
-        self.assertIn("already exists", " ".join(self.lines))
+        self.assertIn("already exist", " ".join(self.lines))
         self.assertEqual(self.install(machine="laptop", force=True), 0, self.lines)
 
     def test_taken_name_is_seen_even_when_the_local_clone_is_behind(self):

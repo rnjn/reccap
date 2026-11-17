@@ -41,7 +41,7 @@ class SyncTest(SandboxTest):
         self.assertEqual(devbox.sync(), 0)
         files = self.origin_files()
         self.assertIn(SESSION_PATH, files)
-        self.assertIn(SESSION_PATH.replace("laptop", "devbox"), files)
+        self.assertIn("sessions/2026-11/14/0912-rotate-credentials.md", files)
 
     def test_unrelated_notes_stay_uncommitted_and_intact(self):
         devbox = self.machine("devbox")
@@ -139,7 +139,7 @@ class SyncTest(SandboxTest):
         self.assertFalse(os.path.exists(self.laptop.path("sessions")))
 
     def test_existing_file_is_reused_when_state_is_lost(self):
-        old = "sessions/laptop/2026-10/2026-10-31-550e8400.md"
+        old = "sessions/2026-10/31/2350-an-older-name.md"
         os.makedirs(os.path.dirname(self.laptop.path(old)))
         with open(self.laptop.path(old), "w") as f:
             f.write("---\nsession_id: " + SID + "\n---\nold\n")
@@ -147,6 +147,37 @@ class SyncTest(SandboxTest):
         self.laptop.sync()
         self.assertIn("Add backoff.", self.laptop.read(old))
         self.assertFalse(os.path.exists(self.laptop.path(SESSION_PATH)))
+
+    def test_two_sessions_with_the_same_start_and_title_get_distinct_files(self):
+        self.laptop.add_transcript(basic_lines())
+        other = "99999999-0000-0000-0000-000000000000"
+        self.laptop.add_transcript([dict(line, sessionId=other) for line in basic_lines()], sid=other)
+        self.laptop.sync()
+        files = sorted(f for f in self.origin_files() if f.startswith("sessions/"))
+        self.assertEqual(files, [SESSION_PATH[:-3] + "-99999999.md", SESSION_PATH])
+
+    def test_session_name_is_used_for_the_file_name(self):
+        named = [{"type": "ai-title", "aiTitle": "Retry backoff fix", "sessionId": SID}, *basic_lines()]
+        self.laptop.add_transcript(named)
+        self.laptop.sync()
+        self.assertIn("sessions/2026-11/14/0912-retry-backoff-fix.md", self.origin_files())
+
+    def test_file_name_stays_when_the_session_name_changes(self):
+        self.laptop.add_transcript(basic_lines())
+        self.laptop.sync()
+        path = self.laptop.add_transcript([*basic_lines(), {"type": "custom-title", "customTitle": "renamed", "sessionId": SID}])
+        os.utime(path, (2000000000, 2000000000))
+        self.laptop.sync()
+        self.assertEqual([f for f in self.origin_files() if f.startswith("sessions/")], [SESSION_PATH])
+
+    def test_files_written_by_another_machine_are_left_alone(self):
+        devbox = self.machine("devbox")
+        devbox.add_transcript(basic_lines("Rotate credentials."))
+        devbox.sync()
+        self.laptop.add_transcript(basic_lines())
+        self.laptop.sync()
+        self.assertIn("machine: devbox\n", self.laptop.read("sessions/2026-11/14/0912-rotate-credentials.md"))
+        self.assertIn("machine: laptop\n", self.laptop.read(SESSION_PATH))
 
     def test_a_broken_transcript_does_not_stop_the_others(self):
         self.laptop.add_transcript(["not json", "[1, 2]"], sid="11111111-0000-0000-0000-000000000000")

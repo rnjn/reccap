@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 COMMAND_NAME = re.compile(r"<command-name>(.*?)</command-name>", re.DOTALL)
+TITLE_FIELDS = {"custom-title": "customTitle", "ai-title": "aiTitle"}
 COMMAND_ARGS = re.compile(r"<command-args>(.*?)</command-args>", re.DOTALL)
 
 
@@ -19,9 +20,20 @@ class Entry:
     parts: list = field(default_factory=list)
 
 
+@dataclass
+class Session:
+    entries: list
+    title: str = ""
+
+
 def read_entries(path):
+    return read_session(path).entries
+
+
+def read_session(path):
     session_id = os.path.basename(path)[: -len(".jsonl")]
     entries = []
+    titles = {}
     with open(path, encoding="utf-8", errors="replace") as f:
         for line in f:
             try:
@@ -30,10 +42,13 @@ def read_entries(path):
                 continue
             if not isinstance(raw, dict):
                 continue
+            if raw.get("type") in TITLE_FIELDS and raw.get("sessionId") == session_id:
+                titles[raw["type"]] = str(raw.get(TITLE_FIELDS[raw["type"]]) or "").strip()
+                continue
             entry = _entry(raw, session_id)
             if entry:
                 entries.append(entry)
-    return entries
+    return Session(entries, titles.get("custom-title") or titles.get("ai-title") or "")
 
 
 def is_loggable(entries):

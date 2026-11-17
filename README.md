@@ -15,17 +15,17 @@ A day page, `daily/2026-11-14.md`:
 
 ### payments-api
 
-- 09:12-17:40 · [Fix retry backoff in the webhook sender](../sessions/laptop/2026-11/2026-11-14-550e8400.md#2026-11-14) · `fix/retry-backoff` · 23 prompts
+- 09:12-17:40 · [Fix retry backoff in the webhook sender](../sessions/2026-11/14/0912-retry-backoff-fix.md#2026-11-14) · `fix/retry-backoff` · 23 prompts
 
 Last sync: devbox 2026-11-14 19:02 · laptop 2026-11-15 08:55
 ```
 
-A session page, `sessions/laptop/2026-11/2026-11-14-550e8400.md`, with your prompts, Claude's replies, and one line per tool call. Tool output and thinking are left out.
+A session page, `sessions/2026-11/14/0912-retry-backoff-fix.md`, with your prompts, Claude's replies, and one line per tool call. Tool output and thinking are left out.
 
 ## How it works
 
 - `reccap sync` runs hourly on every machine. It reads the transcripts under `~/.claude/projects/`, renders the ones that changed, asks `claude -p` for a one-line description of each, and commits and pushes them.
-- Each machine writes only inside `sessions/<machine>/`, so machines never edit the same file.
+- Sessions from all machines share one tree, `sessions/<YYYY-MM>/<DD>/<HHMM>-<name>.md`, where the name comes from the Claude Code session name. Each machine only ever writes its own sessions' files, and the machine is recorded in each file's frontmatter.
 - `reccap day` is run by hand. It syncs this machine, pulls the vault, and writes `daily/<date>.md` from every machine's sessions. Notes you add to a day page outside the `reccap:start` and `reccap:end` markers survive a rerun.
 
 There is no server and no database. Session content is pushed as written, with no redaction, so keep the vault repo private.

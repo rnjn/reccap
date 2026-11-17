@@ -149,7 +149,16 @@ class HelpersTest(unittest.TestCase):
 
     def test_session_relpath_uses_local_start_date(self):
         entries = self.entries(user("2026-11-30T20:00:00Z", "a"))
-        self.assertEqual(session_relpath("laptop", SID, entries, IST), "sessions/laptop/2026-12/2026-12-01-550e8400.md")
+        self.assertEqual(session_relpath(SID, entries, IST, "Fix: the Retry/backoff bug!!"), "sessions/2026-12/01/0130-fix-the-retry-backoff-bug.md")
+
+    def test_session_relpath_cuts_long_titles_at_a_word(self):
+        entries = self.entries(user("2026-11-30T20:00:00Z", "a"))
+        title = "Build a MongoDB monitoring test bed on Hetzner with perf scenarios"
+        self.assertEqual(session_relpath(SID, entries, IST, title), "sessions/2026-12/01/0130-build-a-mongodb-monitoring-test-bed-on.md")
+
+    def test_session_relpath_falls_back_to_the_id_when_the_title_has_no_letters(self):
+        entries = self.entries(user("2026-11-30T20:00:00Z", "a"))
+        self.assertEqual(session_relpath(SID, entries, IST, "¿¿??"), "sessions/2026-12/01/0130-550e8400.md")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from reccap.sync import run_sync
 from tests.helpers import CWD, IST, SID, assistant, text, user, write_transcript
 
 GIT = shutil.which("git")
-SESSION_PATH = "sessions/laptop/2026-11/2026-11-14-550e8400.md"
+SESSION_PATH = "sessions/2026-11/14/0912-add-backoff.md"
 
 
 def git(cwd, *args):

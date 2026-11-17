@@ -1,8 +1,8 @@
 import unittest
 from datetime import datetime, timezone
 
-from reccap.transcript import is_loggable, read_entries
-from tests.helpers import CWD, assistant, base, text, tool, user, write_transcript
+from reccap.transcript import is_loggable, read_entries, read_session
+from tests.helpers import CWD, SID, assistant, base, text, tool, user, write_transcript
 
 T1 = "2026-11-14T03:42:03.120Z"
 T2 = "2026-11-14T03:42:10.000Z"
@@ -82,6 +82,29 @@ class ReadEntriesTest(unittest.TestCase):
         other = base(T2)
         other.update({"type": "system", "subtype": "turn_duration"})
         self.assertEqual([e.kind for e in self.read(boundary, other)], ["compaction"])
+
+
+class TitleTest(unittest.TestCase):
+    def title(self, *lines):
+        return read_session(write_transcript(lines)).title
+
+    def test_auto_title_is_used(self):
+        lines = [{"type": "ai-title", "aiTitle": "Docs folder review", "sessionId": SID}, user(T1, "hello")]
+        self.assertEqual(self.title(*lines), "Docs folder review")
+
+    def test_custom_title_wins_over_auto_title(self):
+        lines = [
+            {"type": "custom-title", "customTitle": "rex", "sessionId": SID},
+            {"type": "ai-title", "aiTitle": "Plugin work", "sessionId": SID},
+        ]
+        self.assertEqual(self.title(*lines), "rex")
+
+    def test_latest_title_of_each_kind_is_used(self):
+        lines = [{"type": "ai-title", "aiTitle": "First", "sessionId": SID}, {"type": "ai-title", "aiTitle": "Second", "sessionId": SID}]
+        self.assertEqual(self.title(*lines), "Second")
+
+    def test_title_from_a_parent_session_is_ignored(self):
+        self.assertEqual(self.title({"type": "ai-title", "aiTitle": "Parent", "sessionId": "eb32cb4b-0000"}, user(T1, "hello")), "")
 
 
 class IsLoggableTest(unittest.TestCase):

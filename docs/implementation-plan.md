@@ -2,7 +2,7 @@
 
 **Goal:** A `reccap` CLI that renders Claude Code sessions to markdown in a git-backed Obsidian vault and builds one page per day.
 
-**Architecture:** `reccap sync` runs on each machine: parse changed transcripts, render one markdown file per session under `sessions/<machine>/`, commit, push. `reccap day` pulls, reads the session files, writes `daily/<date>.md`. Model calls happen only in sync, for a one-line description.
+**Architecture:** `reccap sync` runs on each machine: parse changed transcripts, render one markdown file per session under `sessions/<YYYY-MM>/<DD>/`, commit, push. `reccap day` pulls, reads the session files, writes `daily/<date>.md`. Model calls happen only in sync, for a one-line description.
 
 **Tech Stack:** Python 3.9+, standard library only. External programs: `git`, `claude`. Tests: `unittest`.
 
@@ -26,7 +26,8 @@
 - **Compaction** is `type: system`, `subtype: compact_boundary`.
 - **Slash-only sessions** with no assistant reply (such as a lone `/exit`) are dropped.
 - **Fallback retry.** State records `description_source`, and a `fallback` session is retried even when its transcript is unchanged.
-- **Stable file name.** State records each session's vault path. With no state, an existing file is found by `<id8>` before a new name is chosen.
+- **Stable file name.** State records each session's vault path. With no state, an existing file is found by the `session_id` in its frontmatter before a new name is chosen.
+- **Shared session tree.** Sessions from all machines live in `sessions/<YYYY-MM>/<DD>/<HHMM>-<name>.md`, named after the Claude Code session name. The day page's last sync line comes from the `reccap: <machine>` commit messages.
 - **`reccap day` runs a sync first**, unless `--no-sync` is given, so the morning machine's own sessions are on the page.
 
 ## Review Focus

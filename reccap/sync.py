@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from reccap import config, frontmatter, gitops
 from reccap.describe import describe as describe_with_claude
 from reccap.render import fallback_description, prompts_hash, render_session, session_relpath
-from reccap.transcript import is_loggable, read_entries
+from reccap.transcript import is_loggable, read_session
 
 LOG_BYTES = 1024 * 1024
 
@@ -72,6 +72,7 @@ def _sync(home_dir, dry_run, no_push, since, out, tz, describe, log):
     since_time = datetime.strptime(since, "%Y-%m-%d").timestamp() if since else None
     scratch_folder = project_folder(config.scratch(home_dir))
     written = 0
+    index = {}
     for path in sorted(glob.glob(os.path.join(settings["transcript_root"], "*", "*.jsonl"))):
         if os.path.basename(os.path.dirname(path)) == scratch_folder:
             continue
@@ -83,7 +84,7 @@ def _sync(home_dir, dry_run, no_push, since, out, tz, describe, log):
                     continue
             elif _unchanged(record, stat, describe):
                 continue
-            record = _process(path, record, settings, vault, machine, tz, describe, dry_run, out)
+            record = _process(path, record, settings, vault, machine, tz, describe, dry_run, out, index)
             if dry_run:
                 continue
             written += record.pop("wrote", 0)
@@ -94,7 +95,7 @@ def _sync(home_dir, dry_run, no_push, since, out, tz, describe, log):
     if dry_run:
         return
     config.save_state(home_dir, state)
-    folder = f"sessions/{machine}"
+    folder = "sessions"
     committed = False
     if os.path.isdir(os.path.join(vault, folder)):
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -115,24 +116,25 @@ def _unchanged(record, stat, describe):
     return describe is None or record.get("description_source") != "fallback"
 
 
-def _process(path, record, settings, vault, machine, tz, describe, dry_run, out):
-    entries = read_entries(path)
+def _process(path, record, settings, vault, machine, tz, describe, dry_run, out, index):
+    session = read_session(path)
+    entries = session.entries
     cwd = next((e.cwd for e in entries if e.cwd), "")
     excluded = any(cwd == p or cwd.startswith(p.rstrip("/") + "/") for p in settings["exclude_cwd_prefixes"])
     if not is_loggable(entries) or excluded:
         return {"skipped": True}
     session_id = os.path.basename(path)[: -len(".jsonl")]
-    relpath = record.get("relpath") or _existing(vault, machine, session_id) or session_relpath(machine, session_id, entries, tz)
-    if dry_run:
-        out(relpath)
-        return {}
     digest = prompts_hash(entries)
     if record.get("prompts_hash") == digest and record.get("description_source") == "model":
         description, source = record["description"], "model"
-    elif describe:
+    elif describe and not dry_run:
         description, source = describe(entries)
     else:
         description, source = fallback_description(entries), "fallback"
+    relpath = record.get("relpath") or _existing(vault, session_id, index) or _new_path(vault, session_id, entries, tz, session.title or description)
+    if dry_run:
+        out(relpath)
+        return {}
     content = render_session(session_id, entries, machine, find_repo(cwd), tz, description, source)
     target = os.path.join(vault, relpath)
     wrote = 0
@@ -142,13 +144,31 @@ def _process(path, record, settings, vault, machine, tz, describe, dry_run, out)
     return {"relpath": relpath, "prompts_hash": digest, "description": description, "description_source": source, "wrote": wrote}
 
 
-def _existing(vault, machine, session_id):
-    pattern = os.path.join(vault, "sessions", machine, "*", f"*-{session_id[:8]}.md")
-    for candidate in sorted(glob.glob(pattern)):
-        meta, _ = frontmatter.parse(_read(candidate) or "")
-        if meta.get("session_id") == session_id:
-            return os.path.relpath(candidate, vault)
-    return None
+def _new_path(vault, session_id, entries, tz, title):
+    relpath = session_relpath(session_id, entries, tz, title)
+    if os.path.exists(os.path.join(vault, relpath)):
+        relpath = f"{relpath[: -len('.md')]}-{session_id[:8]}.md"
+    return relpath
+
+
+def session_index(vault):
+    found = {}
+    for path in sorted(glob.glob(os.path.join(vault, "sessions", "*", "*", "*.md"))):
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                meta, _ = frontmatter.parse(f.read(4096))
+        except OSError:
+            continue
+        if meta.get("session_id"):
+            found[meta["session_id"]] = (os.path.relpath(path, vault), meta.get("machine"))
+    return found
+
+
+def _existing(vault, session_id, index):
+    if not index:
+        index.update(session_index(vault))
+        index[""] = None
+    return (index.get(session_id) or (None,))[0]
 
 
 def _read(path):

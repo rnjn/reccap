@@ -5,8 +5,9 @@ import socket
 
 from reccap import config, gitops, schedule
 from reccap.doctor import run_doctor
+from reccap.sync import session_index
 
-IGNORE_LINES = [".obsidian/workspace*.json", ".trash/"]
+IGNORE_LINES = [".obsidian/", ".trash/"]
 MACHINE_NAME = re.compile(r"^[a-z0-9-]+$")
 
 
@@ -39,9 +40,10 @@ def run_install(
         out(f"{vault} must be a git repo with a remote")
         return 1
     gitops.sync_remote(vault, git_bin, push=False)
-    taken = os.path.isdir(os.path.join(vault, "sessions", machine)) and not os.path.exists(os.path.join(home_dir, "state.json"))
+    fresh = not os.path.exists(os.path.join(home_dir, "state.json"))
+    taken = fresh and any(owner == machine for _, owner in session_index(vault).values())
     if taken and not force:
-        out(f"sessions/{machine}/ already exists in the vault; pick another --machine or pass --force")
+        out(f"sessions from a machine named {machine} already exist in the vault; pick another --machine or pass --force")
         return 1
     os.makedirs(config.scratch(home_dir), exist_ok=True)
     settings = config.load_config(home_dir)

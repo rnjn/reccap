@@ -1,10 +1,12 @@
 import hashlib
+import re
 
 from reccap import frontmatter
 
 PROMPT_LIMIT = 4000
 ARGUMENT_LIMIT = 120
 DESCRIPTION_LIMIT = 100
+SLUG_LIMIT = 40
 ARGUMENT_KEYS = ("file_path", "notebook_path", "command", "pattern", "url", "query", "skill", "description")
 PATH_KEYS = ("file_path", "notebook_path")
 
@@ -30,9 +32,21 @@ def prompts_hash(entries):
     return digest.hexdigest()
 
 
-def session_relpath(machine, session_id, entries, tz):
+def slug(title):
+    words = re.sub(r"[^a-z0-9]+", " ", title.lower()).split()
+    kept = ""
+    for word in words:
+        longer = (kept + "-" + word) if kept else word[:SLUG_LIMIT]
+        if len(longer) > SLUG_LIMIT:
+            break
+        kept = longer
+    return kept
+
+
+def session_relpath(session_id, entries, tz, title):
     start = entries[0].time.astimezone(tz)
-    return "sessions/{}/{}/{}-{}.md".format(machine, start.strftime("%Y-%m"), start.strftime("%Y-%m-%d"), session_id[:8])
+    name = slug(title) or session_id[:8]
+    return f"sessions/{start.strftime('%Y-%m')}/{start.strftime('%d')}/{start.strftime('%H%M')}-{name}.md"
 
 
 def render_session(session_id, entries, machine, repo, tz=None, description=None, description_source="fallback"):
