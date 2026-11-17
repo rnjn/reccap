@@ -80,6 +80,15 @@ Settings live in `~/.reccap/config.json`. `install` writes it, and keeps your ed
 
 Local state sits beside it: `state.json`, `sync.log`, and `scratch/`. Set `RECCAP_HOME` to use a different folder.
 
+## One-off scripts
+
+`utils/` holds scripts for filling in history. Both read `~/.reccap/config.json`, write into the vault without committing, and are safe to rerun.
+
+| Script | Purpose |
+| --- | --- |
+| `python3 utils/import_claude_ai.py <conversations.json>` | Turn a claude.ai data export into session files, under the machine name `claude-ai` |
+| `python3 utils/backfill_days.py` | Write a day page for every date that has a session |
+
 ## Development
 
 ```sh
