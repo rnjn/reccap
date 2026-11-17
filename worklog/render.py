@@ -14,9 +14,10 @@ def one_line(text):
 
 
 def fallback_description(entries):
-    for entry in entries:
-        if entry.kind == "prompt":
-            return one_line(entry.text)[:DESCRIPTION_LIMIT].strip()
+    prompts = [e for e in entries if e.kind == "prompt"]
+    typed = [p for p in prompts if not p.slash]
+    for prompt in typed or prompts:
+        return one_line(prompt.text)[:DESCRIPTION_LIMIT].strip()
     return ""
 
 

@@ -135,6 +135,11 @@ class HelpersTest(unittest.TestCase):
         entries = self.entries(user("2026-11-14T03:00:00Z", "fix\nthe " + "z" * 200))
         self.assertEqual(fallback_description(entries), ("fix the " + "z" * 200)[:100])
 
+    def test_fallback_description_prefers_a_typed_prompt_over_a_slash_command(self):
+        slash = user("2026-11-14T03:00:00Z", "<command-name>/login</command-name>", human=False)
+        self.assertEqual(fallback_description(self.entries(slash, user("2026-11-14T03:01:00Z", "fix the cert"))), "fix the cert")
+        self.assertEqual(fallback_description(self.entries(slash)), "/login")
+
     def test_prompts_hash_changes_only_with_prompts(self):
         one = self.entries(user("2026-11-14T03:00:00Z", "a"))
         same = self.entries(user("2026-11-14T03:00:00Z", "a"), assistant("2026-11-14T03:01:00Z", text("r")))
