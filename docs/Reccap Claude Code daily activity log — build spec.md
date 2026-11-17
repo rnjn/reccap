@@ -1,10 +1,10 @@
-# Worklog: Claude Code daily activity log — build spec
+# Reccap: Claude Code daily activity log — build spec
 
 Nov 15, 2026 · @rnjn
 
 ## Purpose and scope
 
-Worklog turns Claude Code sessions from several machines into one daily page in an Obsidian vault, with a link from each session to a readable transcript. It serves two uses:
+Reccap turns Claude Code sessions from several machines into one daily page in an Obsidian vault, with a link from each session to a readable transcript. It serves two uses:
 
 - **Standup prep.** One page shows everything worked on yesterday, across all machines.
 - **Remembering tasks.** With many sessions open, tasks get forgotten. A daily checkpoint lists every session, so none is lost and there is no need to hunt through terminal tabs.
@@ -25,24 +25,24 @@ Worklog turns Claude Code sessions from several machines into one daily page in 
 
 ## Architecture
 
-There are three parts: a leaf command that runs on every machine, a shared git repo, and a morning command that builds the day page. Both commands ship in one CLI called `worklog`.
+There are three parts: a leaf command that runs on every machine, a shared git repo, and a morning command that builds the day page. Both commands ship in one CLI called `reccap`.
 
-1. **Leaf: `worklog sync`.** Runs on a schedule on every machine where Claude Code is used. It finds session transcripts that changed since the last run, renders each to a markdown file, and pushes them to the repo.
+1. **Leaf: `reccap sync`.** Runs on a schedule on every machine where Claude Code is used. It finds session transcripts that changed since the last run, renders each to a markdown file, and pushes them to the repo.
 2. **Shared repo.** A private GitHub repo that is also the Obsidian vault. Each machine writes only inside its own folder, so pushes from different machines never touch the same file.
-3. **Morning: `worklog day`.** Run by hand on whichever machine is opened first. It pulls the repo, reads the frontmatter of the session files, writes the day page, and pushes it.
+3. **Morning: `reccap day`.** Run by hand on whichever machine is opened first. It pulls the repo, reads the frontmatter of the session files, writes the day page, and pushes it.
 
-All model calls happen at the leaves. Each leaf writes a one-line description into the session file's frontmatter, so `worklog day` only assembles files and makes no model calls.
+All model calls happen at the leaves. Each leaf writes a one-line description into the session file's frontmatter, so `reccap day` only assembles files and makes no model calls.
 
 ### Implementation constraints
 
 - Python 3.9 or later, standard library only. No third-party packages.
 - External programs: `git` and the `claude` CLI, both already present on every leaf.
 - macOS and Linux are supported. Windows is out of scope unless confirmed (see open questions).
-- The reading machine is also a leaf and runs both commands. A machine with no Obsidian, such as a remote dev box, runs only `worklog sync`.
+- The reading machine is also a leaf and runs both commands. A machine with no Obsidian, such as a remote dev box, runs only `reccap sync`.
 
 ## Repository and vault layout
 
-The vault root is the git repo root. Worklog owns two folders in it and touches nothing else, so other notes can live in the same vault.
+The vault root is the git repo root. Reccap owns two folders in it and touches nothing else, so other notes can live in the same vault.
 
 ```
 <vault>/
@@ -55,11 +55,11 @@ The vault root is the git repo root. Worklog owns two folders in it and touches 
         2026-11-14-550e8400.md
 ```
 
-- **`daily/<YYYY-MM-DD>.md`** is the day page. Only `worklog day` writes here.
-- **`sessions/<machine>/<YYYY-MM>/<start-date>-<id8>.md`** is one session. `<start-date>` is the local date of the session's first entry and `<id8>` is the first 8 characters of the session ID. The name never changes after creation, so links stay valid. Only `worklog sync` on that machine writes here.
+- **`daily/<YYYY-MM-DD>.md`** is the day page. Only `reccap day` writes here.
+- **`sessions/<machine>/<YYYY-MM>/<start-date>-<id8>.md`** is one session. `<start-date>` is the local date of the session's first entry and `<id8>` is the first 8 characters of the session ID. The name never changes after creation, so links stay valid. Only `reccap sync` on that machine writes here.
 - **`.gitignore`** must contain `.obsidian/workspace*.json` and `.trash/`. The installer adds these lines if they are missing.
 
-Each machine also keeps local state outside the vault, in `~/.worklog/`:
+Each machine also keeps local state outside the vault, in `~/.reccap/`:
 
 | File | Contents |
 | --- | --- |
@@ -69,12 +69,12 @@ Each machine also keeps local state outside the vault, in `~/.worklog/`:
 | `sync.log` | Rotating log of sync runs, capped at 1 MB |
 | `sync.lock` | Lock file that prevents two sync runs at once |
 
-## Leaf command: `worklog sync`
+## Leaf command: `reccap sync`
 
-`worklog sync` is idempotent: running it twice with no new activity changes nothing and creates no commit. It runs these steps in order.
+`reccap sync` is idempotent: running it twice with no new activity changes nothing and creates no commit. It runs these steps in order.
 
-1. **Lock.** Take `~/.worklog/sync.lock`. If another run holds it, exit 0 without output.
-2. **Discover.** List `*.jsonl` files one level under the transcript root, which defaults to `~/.claude/projects/`. Skip any file whose size and modified time match `state.json`. Skip subagent transcripts in nested folders. Skip the project folder that corresponds to `~/.worklog/scratch`.
+1. **Lock.** Take `~/.reccap/sync.lock`. If another run holds it, exit 0 without output.
+2. **Discover.** List `*.jsonl` files one level under the transcript root, which defaults to `~/.claude/projects/`. Skip any file whose size and modified time match `state.json`. Skip subagent transcripts in nested folders. Skip the project folder that corresponds to `~/.reccap/scratch`.
 3. **Parse.** Read the transcript line by line as JSON. Skip lines that fail to parse, since the last line may be half-written while a session is live. Skip entry types the parser does not know.
 4. **Filter.** Drop sessions that contain no prompt typed by the user.
 5. **Render.** Build the session markdown as described in the next section.
@@ -106,7 +106,7 @@ Keep all knowledge of these field names in one module, so a format change needs 
 
 - Build the input from the session's user prompts, each cut to 500 characters, plus the last assistant text, cut to 1,000 characters. Cap the total input at 8,000 characters, keeping the earliest and latest prompts.
 - Ask for a single line of at most 100 characters that says what the session was working on, phrased as a task, with no trailing period.
-- Run `claude -p` with `~/.worklog/scratch` as the working directory, a 60-second timeout, and no tools available. Check `claude --help` for the current flags to restrict tools and to avoid saving the call as a session. The scratch exclusion in step 2 must stay even if such a flag exists, or worklog will log its own description calls.
+- Run `claude -p` with `~/.reccap/scratch` as the working directory, a 60-second timeout, and no tools available. Check `claude --help` for the current flags to restrict tools and to avoid saving the call as a session. The scratch exclusion in step 2 must stay even if such a flag exists, or reccap will log its own description calls.
 - Cache the result in `state.json`, keyed by a hash of the user prompts. Call the model again only when the session has new prompts.
 - On timeout or error, use the first user prompt cut to 100 characters, set `description_source: fallback`, and try again on the next run.
 
@@ -125,7 +125,7 @@ Redaction is a best-effort pattern scrub and will miss secrets it has no pattern
 
 - Stage only `sessions/<machine>/`. Never run `git add -A`, because the vault may hold unrelated uncommitted notes.
 - If nothing is staged, stop here.
-- Commit with the message `worklog: <machine> <UTC timestamp>`.
+- Commit with the message `reccap: <machine> <UTC timestamp>`.
 - Run `git pull --rebase --autostash`, then `git push`. If the push is rejected, repeat the pull and push up to 3 times.
 - If the push still fails, or the network is down, leave the commit in place, log the error, and exit 0. The next run pushes it.
 
@@ -197,15 +197,15 @@ Backoff is in place and the tests pass.
 - **Compaction.** Render a compaction entry as the single line `*Context compacted*`.
 - **Escaping.** A line in a prompt or reply that starts with `#` gets a leading backslash, so it cannot create a heading and break the day links.
 
-## Morning command: `worklog day`
+## Morning command: `reccap day`
 
-`worklog day [DATE]` writes the day page for `DATE`, which defaults to yesterday in the local time zone. It makes no model calls.
+`reccap day [DATE]` writes the day page for `DATE`, which defaults to yesterday in the local time zone. It makes no model calls.
 
 1. Run `git pull --rebase --autostash` in the vault. If the pull fails, print a warning and continue with local data.
 2. Read every file under `sessions/` and keep those whose `active_dates` include `DATE`.
 3. For each kept session, read the body section under the `## DATE` heading. Take the first and last `### HH:MM` times and count the `Prompt` headings in that section.
 4. Write `daily/DATE.md`.
-5. Stage only that file, commit as `worklog: day DATE`, and push with the same retry rule as sync.
+5. Stage only that file, commit as `reccap: day DATE`, and push with the same retry rule as sync.
 
 Flags: `--no-pull` and `--no-push` skip the git steps. `--open` opens the page in Obsidian through an `obsidian://open` URL after writing it.
 
@@ -219,7 +219,7 @@ machines: [devbox, laptop]
 ---
 # 2026-11-14 Saturday
 
-<!-- worklog:start -->
+<!-- reccap:start -->
 ## devbox
 
 ### infra
@@ -234,7 +234,7 @@ machines: [devbox, laptop]
 - 11:30-11:42 · [Explain the idempotency key design](../sessions/laptop/2026-11/2026-11-13-03fe7c10.md#2026-11-14) · `main` · 3 prompts · started 2026-11-13
 
 Last sync: devbox 2026-11-14 19:02 · laptop 2026-11-15 08:55
-<!-- worklog:end -->
+<!-- reccap:end -->
 ```
 
 - **Grouping and order.** Machines in alphabetical order, then repos in alphabetical order, then sessions by first activity time on that date.
@@ -242,27 +242,27 @@ Last sync: devbox 2026-11-14 19:02 · laptop 2026-11-15 08:55
 - **Carried sessions.** A session that started on an earlier date gets a trailing `started <date>` note.
 - **Last sync line.** For each machine folder, show the time of the latest commit that touched it, from `git log -1`. This makes a machine that has stopped syncing visible on the page.
 - **Empty day.** If no session matches, write the page with the line `No sessions recorded.` and the last sync line.
-- **Hand edits.** Replace only the text between the `worklog:start` and `worklog:end` markers. Keep everything outside them, so notes added to the page by hand survive a rerun. If the file is new, write the frontmatter, the title, and the marked block.
+- **Hand edits.** Replace only the text between the `reccap:start` and `reccap:end` markers. Keep everything outside them, so notes added to the page by hand survive a rerun. If the file is new, write the frontmatter, the title, and the marked block.
 
 ## Configuration, installation and scheduling
 
-Worklog's source lives in its own repo, separate from the vault. Each machine clones it and runs the installer once.
+Reccap's source lives in its own repo, separate from the vault. Each machine clones it and runs the installer once.
 
 ### Commands
 
 | Command | Purpose |
 | --- | --- |
-| `worklog install --vault <path> [--repo-url <url>] [--machine <name>]` | Set up this machine and schedule sync |
-| `worklog sync` | Render and push changed sessions |
-| `worklog day [DATE]` | Build the day page |
-| `worklog doctor` | Check the setup and print one pass or fail line per check |
-| `worklog uninstall` | Remove the schedule. Leaves the vault and `~/.worklog/` in place |
+| `reccap install --vault <path> [--repo-url <url>] [--machine <name>]` | Set up this machine and schedule sync |
+| `reccap sync` | Render and push changed sessions |
+| `reccap day [DATE]` | Build the day page |
+| `reccap doctor` | Check the setup and print one pass or fail line per check |
+| `reccap uninstall` | Remove the schedule. Leaves the vault and `~/.reccap/` in place |
 
 ### `config.json`
 
 ```json
 {
-  "vault_path": "/Users/me/vaults/worklog",
+  "vault_path": "/Users/me/vaults/reccap",
   "machine": "laptop",
   "transcript_root": "/Users/me/.claude/projects",
   "git_bin": "/usr/bin/git",
@@ -280,15 +280,15 @@ Worklog's source lives in its own repo, separate from the vault. Each machine cl
 - `exclude_cwd_prefixes` lists directories whose sessions are never rendered or pushed, for work that should stay off the log.
 - `machine` must be unique across machines. It may contain only lowercase letters, digits, and hyphens.
 
-### What `worklog install` does
+### What `reccap install` does
 
 1. Confirm `git` and `claude` exist and record their absolute paths.
 2. If `vault_path` does not exist and `--repo-url` is given, clone it. Otherwise confirm the path is a git repo with a remote.
-3. Create `~/.worklog/` with `config.json` and `scratch/`.
+3. Create `~/.reccap/` with `config.json` and `scratch/`.
 4. Add the required `.gitignore` lines to the vault if missing.
 5. Fail with a clear message if `sessions/<machine>/` already exists in the repo while this machine has no `state.json`, which suggests the machine name is taken. Proceed only with `--force`.
-6. Install the schedule for `worklog sync`.
-7. Run `worklog doctor`.
+6. Install the schedule for `reccap sync`.
+7. Run `reccap doctor`.
 
 ### Scheduling
 
@@ -298,15 +298,15 @@ Worklog's source lives in its own repo, separate from the vault. Each machine cl
 | Linux | systemd user timer | Hourly by default, `Persistent=true` so a missed run fires after boot |
 | Linux fallback | crontab entry | Used when systemd user services are unavailable |
 
-`worklog day` is not scheduled. It is run by hand each morning.
+`reccap day` is not scheduled. It is run by hand each morning.
 
-### `worklog doctor` checks
+### `reccap doctor` checks
 
 - The vault is a git repo, has a remote, and `git ls-remote` succeeds with `GIT_TERMINAL_PROMPT=0`. This proves a scheduled push will not hang on a credential prompt.
 - `claude -p` returns a reply from the scratch directory within the timeout.
 - The transcript root exists and holds at least one transcript.
 - The schedule is installed and its last run exited 0.
-- No unpushed worklog commits are older than 24 hours.
+- No unpushed reccap commits are older than 24 hours.
 
 ## Edge cases and failure handling
 
@@ -318,8 +318,8 @@ The general rule is that sync never blocks, never prompts, and never deletes any
 | Session continues on a later day | Update the same file, add a new date heading, and add the date to `active_dates`. It appears on both day pages |
 | Transcript is removed by Claude Code's own retention cleanup | Keep the session file in the vault. A missing transcript is never a reason to delete |
 | Machine is offline | Commits pile up locally and are pushed by a later run |
-| A session arrives after its day page was built | Rerun `worklog day DATE`. The page is rebuilt from current data |
-| Vault has unrelated uncommitted notes | `--autostash` protects them, and only worklog's own paths are staged |
+| A session arrives after its day page was built | Rerun `reccap day DATE`. The page is rebuilt from current data |
+| Vault has unrelated uncommitted notes | `--autostash` protects them, and only reccap's own paths are staged |
 | Rebase reports a conflict | Run `git rebase --abort`, log the error, and exit. Do not attempt to resolve it |
 | `claude` is missing, logged out, or times out | Use the fallback description and continue. Rendering and pushing do not depend on the model call |
 | Transcript is very large | Read it as a stream, line by line. Never load the whole file into memory |
@@ -345,24 +345,24 @@ Tests use the standard library `unittest` module and run with no network and no 
 
 1. Transcript parser and renderer, with golden tests.
 2. Redaction.
-3. `worklog sync` without the description step, including state and the git protocol.
+3. `reccap sync` without the description step, including state and the git protocol.
 4. Description step with cache and fallback.
-5. `worklog day`.
-6. `worklog install`, scheduling, and `worklog doctor`.
+5. `reccap day`.
+6. `reccap install`, scheduling, and `reccap doctor`.
 
 ### Acceptance criteria
 
-- [ ] On a fresh machine, `worklog install` followed by one `worklog sync` puts rendered sessions in the GitHub repo.
-- [ ] A second `worklog sync` with no new activity creates no commit.
+- [ ] On a fresh machine, `reccap install` followed by one `reccap sync` puts rendered sessions in the GitHub repo.
+- [ ] A second `reccap sync` with no new activity creates no commit.
 - [ ] Two machines syncing in the same minute both succeed, and both sets of files reach the repo.
 - [ ] A session file opens in Obsidian with readable prompts, replies, and one-line tool calls, and contains no tool output.
 - [ ] A fixture secret of each supported kind is absent from the rendered file.
-- [ ] `worklog day` lists every session active on the date across all machines, and each link opens the session at that date's heading.
+- [ ] `reccap day` lists every session active on the date across all machines, and each link opens the session at that date's heading.
 - [ ] A session spanning two days appears on both day pages with the correct times for each day.
-- [ ] Text added by hand outside the markers on a day page survives a rerun of `worklog day`.
-- [ ] Worklog's own `claude -p` calls never appear as sessions.
-- [ ] With the network down, `worklog sync` exits 0, and the next run with the network up pushes the backlog.
-- [ ] `worklog doctor` passes on a correctly installed machine and names the failing check on a broken one.
+- [ ] Text added by hand outside the markers on a day page survives a rerun of `reccap day`.
+- [ ] Reccap's own `claude -p` calls never appear as sessions.
+- [ ] With the network down, `reccap sync` exits 0, and the next run with the network up pushes the backlog.
+- [ ] `reccap doctor` passes on a correctly installed machine and names the failing check on a broken one.
 
 ## Deferred features and open questions
 
