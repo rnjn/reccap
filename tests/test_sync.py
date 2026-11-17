@@ -4,9 +4,9 @@ import re
 import tempfile
 import unittest
 
+from reccap.sync import find_repo
 from tests.helpers import SID, assistant, text, user
 from tests.sandbox import SESSION_PATH, SandboxTest, basic_lines, git
-from worklog.sync import find_repo
 
 
 class SyncTest(SandboxTest):
@@ -15,7 +15,7 @@ class SyncTest(SandboxTest):
         self.assertEqual(self.laptop.sync(), 0)
         self.assertIn("### 09:12 Prompt\n\nAdd backoff.", self.laptop.read(SESSION_PATH))
         self.assertIn(SESSION_PATH, self.origin_files())
-        self.assertRegex(git(self.laptop.vault, "log", "-1", "--format=%s"), r"^worklog: laptop \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+        self.assertRegex(git(self.laptop.vault, "log", "-1", "--format=%s"), r"^reccap: laptop \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 
     def test_second_sync_with_no_activity_makes_no_commit(self):
         self.laptop.add_transcript(basic_lines())

@@ -5,9 +5,9 @@ import subprocess
 import tempfile
 import unittest
 
+from reccap import config
+from reccap.sync import run_sync
 from tests.helpers import CWD, IST, SID, assistant, text, user, write_transcript
-from worklog import config
-from worklog.sync import run_sync
 
 GIT = shutil.which("git")
 SESSION_PATH = "sessions/laptop/2026-11/2026-11-14-550e8400.md"

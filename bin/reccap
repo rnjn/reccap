@@ -8,4 +8,4 @@ while [ -L "$script" ]; do
   esac
 done
 root=$(cd "$(dirname "$script")/.." && pwd)
-PYTHONPATH="$root${PYTHONPATH:+:$PYTHONPATH}" exec "${WORKLOG_PYTHON:-python3}" -m worklog "$@"
+PYTHONPATH="$root${PYTHONPATH:+:$PYTHONPATH}" exec "${RECCAP_PYTHON:-python3}" -m reccap "$@"

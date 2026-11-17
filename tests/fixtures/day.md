@@ -5,7 +5,7 @@ machines: [devbox, laptop]
 ---
 # 2026-11-14 Saturday
 
-<!-- worklog:start -->
+<!-- reccap:start -->
 ## devbox
 
 ### infra
@@ -20,4 +20,4 @@ machines: [devbox, laptop]
 - 11:30-11:42 · [Explain the idempotency key design](../sessions/laptop/2026-11/2026-11-13-03fe7c10.md#2026-11-14) · `main` · 3 prompts · started 2026-11-13
 
 Last sync: devbox 2026-11-14 19:02 · laptop 2026-11-15 08:55
-<!-- worklog:end -->
+<!-- reccap:end -->

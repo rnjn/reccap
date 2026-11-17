@@ -2,11 +2,11 @@ import argparse
 import sys
 from datetime import datetime
 
-from worklog import config, schedule
-from worklog.day import run_day
-from worklog.doctor import run_doctor
-from worklog.install import run_install
-from worklog.sync import run_sync
+from reccap import config, schedule
+from reccap.day import run_day
+from reccap.doctor import run_doctor
+from reccap.install import run_install
+from reccap.sync import run_sync
 
 
 def date_arg(value):
@@ -18,7 +18,7 @@ def date_arg(value):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="worklog", description="Claude Code daily activity log")
+    parser = argparse.ArgumentParser(prog="reccap", description="Claude Code daily activity log")
     commands = parser.add_subparsers(dest="command", required=True)
     sync = commands.add_parser("sync", help="render and push changed sessions")
     sync.add_argument("--dry-run", action="store_true", help="print what would be written and change nothing")

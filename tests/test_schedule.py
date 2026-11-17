@@ -4,10 +4,10 @@ import subprocess
 import tempfile
 import unittest
 
-from worklog import schedule
+from reccap import schedule
 
-COMMAND = ["/usr/bin/python3", "-m", "worklog", "sync"]
-ENV = {"PYTHONPATH": "/src/worklog", "WORKLOG_HOME": "/home/me/.worklog"}
+COMMAND = ["/usr/bin/python3", "-m", "reccap", "sync"]
+ENV = {"PYTHONPATH": "/src/reccap", "RECCAP_HOME": "/home/me/.reccap"}
 
 
 class Recorder:
@@ -28,19 +28,19 @@ class Recorder:
 
 class TextTest(unittest.TestCase):
     def test_launchd_plist(self):
-        plist = plistlib.loads(schedule.launchd_plist(COMMAND, ENV, 3600, "/home/me/.worklog/launchd.log").encode())
-        self.assertEqual(plist["Label"], "com.worklog.sync")
+        plist = plistlib.loads(schedule.launchd_plist(COMMAND, ENV, 3600, "/home/me/.reccap/launchd.log").encode())
+        self.assertEqual(plist["Label"], "com.reccap.sync")
         self.assertEqual(plist["ProgramArguments"], COMMAND)
         self.assertEqual(plist["EnvironmentVariables"], ENV)
         self.assertEqual(plist["StartInterval"], 3600)
         self.assertIs(plist["RunAtLoad"], True)
-        self.assertEqual(plist["StandardErrorPath"], "/home/me/.worklog/launchd.log")
+        self.assertEqual(plist["StandardErrorPath"], "/home/me/.reccap/launchd.log")
 
     def test_systemd_units(self):
         service = schedule.systemd_service(COMMAND, ENV)
         self.assertIn("Type=oneshot\n", service)
-        self.assertIn("ExecStart=/usr/bin/python3 -m worklog sync\n", service)
-        self.assertIn('Environment="PYTHONPATH=/src/worklog"\n', service)
+        self.assertIn("ExecStart=/usr/bin/python3 -m reccap sync\n", service)
+        self.assertIn('Environment="PYTHONPATH=/src/reccap"\n', service)
         timer = schedule.systemd_timer(60)
         self.assertIn("OnCalendar=hourly\n", timer)
         self.assertIn("Persistent=true\n", timer)
@@ -50,7 +50,7 @@ class TextTest(unittest.TestCase):
     def test_cron_line(self):
         self.assertEqual(
             schedule.cron_line(COMMAND, ENV, 60),
-            "0 * * * * PYTHONPATH=/src/worklog WORKLOG_HOME=/home/me/.worklog /usr/bin/python3 -m worklog sync # worklog-sync",
+            "0 * * * * PYTHONPATH=/src/reccap RECCAP_HOME=/home/me/.reccap /usr/bin/python3 -m reccap sync # reccap-sync",
         )
         self.assertTrue(schedule.cron_line(COMMAND, ENV, 20).startswith("*/20 * * * * "))
 
@@ -58,16 +58,16 @@ class TextTest(unittest.TestCase):
 class InstallTest(unittest.TestCase):
     def setUp(self):
         self.user_home = tempfile.mkdtemp()
-        self.home_dir = os.path.join(self.user_home, ".worklog")
+        self.home_dir = os.path.join(self.user_home, ".reccap")
 
     def test_macos_writes_a_user_agent_and_loads_it(self):
         run = Recorder()
         schedule.install(self.home_dir, 60, platform="darwin", user_home=self.user_home, run=run)
-        path = os.path.join(self.user_home, "Library", "LaunchAgents", "com.worklog.sync.plist")
+        path = os.path.join(self.user_home, "Library", "LaunchAgents", "com.reccap.sync.plist")
         with open(path, "rb") as f:
             plist = plistlib.load(f)
-        self.assertEqual(plist["ProgramArguments"][1:], ["-m", "worklog", "sync"])
-        self.assertEqual(plist["EnvironmentVariables"]["WORKLOG_HOME"], self.home_dir)
+        self.assertEqual(plist["ProgramArguments"][1:], ["-m", "reccap", "sync"])
+        self.assertEqual(plist["EnvironmentVariables"]["RECCAP_HOME"], self.home_dir)
         self.assertEqual(run.calls[-1][:2], ["launchctl", "bootstrap"])
         self.assertEqual(run.calls[-1][-1], path)
 
@@ -75,31 +75,31 @@ class InstallTest(unittest.TestCase):
         run = Recorder()
         schedule.install(self.home_dir, 60, platform="linux", user_home=self.user_home, run=run)
         units = os.path.join(self.user_home, ".config", "systemd", "user")
-        self.assertTrue(os.path.exists(os.path.join(units, "worklog-sync.service")))
-        self.assertTrue(os.path.exists(os.path.join(units, "worklog-sync.timer")))
-        self.assertIn(["systemctl", "--user", "enable", "--now", "worklog-sync.timer"], run.calls)
+        self.assertTrue(os.path.exists(os.path.join(units, "reccap-sync.service")))
+        self.assertTrue(os.path.exists(os.path.join(units, "reccap-sync.timer")))
+        self.assertIn(["systemctl", "--user", "enable", "--now", "reccap-sync.timer"], run.calls)
 
     def test_linux_without_user_systemd_falls_back_to_cron(self):
-        run = Recorder(failing=["systemctl"], stdout={"crontab -l": "5 4 * * * backup\n0 * * * * stale-entry # worklog-sync\n"})
+        run = Recorder(failing=["systemctl"], stdout={"crontab -l": "5 4 * * * backup\n0 * * * * stale-entry # reccap-sync\n"})
         schedule.install(self.home_dir, 60, platform="linux", user_home=self.user_home, run=run)
         self.assertEqual(run.calls[-1], ["crontab", "-"])
         written = run.inputs[-1]
         self.assertIn("5 4 * * * backup\n", written)
         self.assertNotIn("stale-entry", written)
-        self.assertEqual(written.count("# worklog-sync"), 1)
+        self.assertEqual(written.count("# reccap-sync"), 1)
 
     def test_uninstall_removes_the_macos_agent(self):
         schedule.install(self.home_dir, 60, platform="darwin", user_home=self.user_home, run=Recorder())
         run = Recorder()
         schedule.uninstall(platform="darwin", user_home=self.user_home, run=run)
-        self.assertFalse(os.path.exists(os.path.join(self.user_home, "Library", "LaunchAgents", "com.worklog.sync.plist")))
+        self.assertFalse(os.path.exists(os.path.join(self.user_home, "Library", "LaunchAgents", "com.reccap.sync.plist")))
         self.assertEqual(run.calls[0][:2], ["launchctl", "bootout"])
 
     def test_uninstall_removes_linux_units_and_cron_line(self):
         schedule.install(self.home_dir, 60, platform="linux", user_home=self.user_home, run=Recorder())
-        run = Recorder(stdout={"crontab -l": "5 4 * * * backup\n0 * * * * x # worklog-sync\n"})
+        run = Recorder(stdout={"crontab -l": "5 4 * * * backup\n0 * * * * x # reccap-sync\n"})
         schedule.uninstall(platform="linux", user_home=self.user_home, run=run)
-        self.assertFalse(os.path.exists(os.path.join(self.user_home, ".config", "systemd", "user", "worklog-sync.timer")))
+        self.assertFalse(os.path.exists(os.path.join(self.user_home, ".config", "systemd", "user", "reccap-sync.timer")))
         self.assertEqual(run.inputs[-1], "5 4 * * * backup\n")
 
     def test_status_on_macos(self):
@@ -115,7 +115,7 @@ class InstallTest(unittest.TestCase):
     def test_status_on_linux(self):
         ok = Recorder(stdout={"show": "ExecMainStatus=0\n"})
         bad = Recorder(stdout={"show": "ExecMainStatus=1\n"})
-        cron = Recorder(failing=["systemctl"], stdout={"crontab -l": "0 * * * * x # worklog-sync\n"})
+        cron = Recorder(failing=["systemctl"], stdout={"crontab -l": "0 * * * * x # reccap-sync\n"})
         nothing = Recorder(failing=["systemctl"])
         self.assertTrue(schedule.status(platform="linux", user_home=self.user_home, run=ok)[0])
         self.assertFalse(schedule.status(platform="linux", user_home=self.user_home, run=bad)[0])

@@ -3,8 +3,8 @@ import re
 import shutil
 import socket
 
-from worklog import config, gitops, schedule
-from worklog.doctor import run_doctor
+from reccap import config, gitops, schedule
+from reccap.doctor import run_doctor
 
 IGNORE_LINES = [".obsidian/workspace*.json", ".trash/"]
 MACHINE_NAME = re.compile(r"^[a-z0-9-]+$")
@@ -70,4 +70,4 @@ def _ignore(vault, git_bin):
     if current and not current.endswith("\n"):
         current += "\n"
     config.write_atomic(path, current + "".join(line + "\n" for line in missing))
-    gitops.commit(vault, git_bin, [".gitignore"], "worklog: gitignore")
+    gitops.commit(vault, git_bin, [".gitignore"], "reccap: gitignore")

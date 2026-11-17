@@ -2,10 +2,10 @@ import json
 import os
 import socket
 
+from reccap.doctor import run_doctor
+from reccap.install import default_machine, run_install
 from tests.sandbox import GIT, SESSION_PATH, SandboxTest, basic_lines, git
 from tests.test_describe import FAKE
-from worklog.doctor import run_doctor
-from worklog.install import default_machine, run_install
 
 
 class FakeScheduler:
@@ -148,14 +148,14 @@ class DoctorTest(SandboxTest):
         self.assertEqual(self.doctor(FakeScheduler(ok=False)), 1)
         self.assertEqual(self.failures(), ["FAIL schedule: last run exited 1"])
 
-    def test_old_unpushed_worklog_commit_is_named(self):
+    def test_old_unpushed_reccap_commit_is_named(self):
         os.makedirs(os.path.dirname(self.laptop.path(SESSION_PATH)))
         with open(self.laptop.path(SESSION_PATH), "w") as f:
             f.write("x\n")
         git(self.laptop.vault, "add", ".")
         os.environ["GIT_COMMITTER_DATE"] = "2020-01-01T00:00:00+00:00"
         self.addCleanup(os.environ.pop, "GIT_COMMITTER_DATE", None)
-        git(self.laptop.vault, "commit", "-q", "-m", "worklog: laptop 2020-01-01T00:00:00Z")
+        git(self.laptop.vault, "commit", "-q", "-m", "reccap: laptop 2020-01-01T00:00:00Z")
         self.assertEqual(self.doctor(), 1)
         self.assertTrue(self.failures()[0].startswith("FAIL unpushed commits"))
 

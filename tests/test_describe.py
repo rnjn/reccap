@@ -2,11 +2,11 @@ import json
 import os
 import tempfile
 
+from reccap import frontmatter
+from reccap.describe import build_input, describe
+from reccap.transcript import read_entries
 from tests.helpers import assistant, text, user, write_transcript
 from tests.sandbox import SESSION_PATH, SandboxTest, basic_lines
-from worklog import frontmatter
-from worklog.describe import build_input, describe
-from worklog.transcript import read_entries
 
 FAKE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_claude.py")
 REPLY = "Fix retry backoff in the webhook sender"

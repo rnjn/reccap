@@ -1,10 +1,10 @@
 import os
 from datetime import date
 
+from reccap import frontmatter
+from reccap.day import run_day
 from tests.helpers import IST, fixture
 from tests.sandbox import SandboxTest, basic_lines, git
-from worklog import frontmatter
-from worklog.day import run_day
 
 DAY = "daily/2026-11-14.md"
 
@@ -90,7 +90,7 @@ class DayTest(SandboxTest):
         self.maxDiff = None
         self.assertEqual(self.laptop.read(DAY), fixture("day.md"))
         self.assertIn(DAY, self.origin_files())
-        self.assertEqual(git(self.laptop.vault, "log", "-1", "--format=%s"), "worklog: day 2026-11-14")
+        self.assertEqual(git(self.laptop.vault, "log", "-1", "--format=%s"), "reccap: day 2026-11-14")
 
     def test_multi_day_session_shows_each_days_own_times(self):
         self.spec_sessions()
@@ -110,7 +110,7 @@ class DayTest(SandboxTest):
         page = self.laptop.read("daily/2026-11-10.md")
         self.assertIn("session_count: 0\nmachines: []\n", page)
         self.assertIn(
-            "<!-- worklog:start -->\nNo sessions recorded.\n\nLast sync: devbox 2026-11-14 19:02 · laptop 2026-11-15 08:55\n<!-- worklog:end -->\n",
+            "<!-- reccap:start -->\nNo sessions recorded.\n\nLast sync: devbox 2026-11-14 19:02 · laptop 2026-11-15 08:55\n<!-- reccap:end -->\n",
             page,
         )
 
@@ -126,7 +126,7 @@ class DayTest(SandboxTest):
         self.day("2026-11-10")
         page = self.laptop.read("daily/2026-11-10.md")
         self.assertIn("Standup: ask about the deploy.\n", page)
-        self.assertTrue(page.endswith("<!-- worklog:end -->\n\n## Notes\n\nmine\n"))
+        self.assertTrue(page.endswith("<!-- reccap:end -->\n\n## Notes\n\nmine\n"))
         self.assertIn("tags: [standup]\n", page)
         self.assertIn("session_count: 1\nmachines: [devbox]\n", page)
         self.assertIn("- 08:00-08:05 · [Late]", page)
@@ -138,7 +138,7 @@ class DayTest(SandboxTest):
             f.write("my own notes\n")
         self.day()
         page = self.laptop.read(DAY)
-        self.assertTrue(page.startswith("my own notes\n\n<!-- worklog:start -->\n"))
+        self.assertTrue(page.startswith("my own notes\n\n<!-- reccap:start -->\n"))
 
     def test_rerun_with_no_change_makes_no_commit(self):
         self.spec_sessions()

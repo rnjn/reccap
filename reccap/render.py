@@ -1,6 +1,6 @@
 import hashlib
 
-from worklog import frontmatter
+from reccap import frontmatter
 
 PROMPT_LIMIT = 4000
 ARGUMENT_LIMIT = 120

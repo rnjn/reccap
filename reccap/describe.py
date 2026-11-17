@@ -1,6 +1,6 @@
 import subprocess
 
-from worklog.render import DESCRIPTION_LIMIT, fallback_description
+from reccap.render import DESCRIPTION_LIMIT, fallback_description
 
 PROMPT_CUT = 500
 REPLY_CUT = 1000

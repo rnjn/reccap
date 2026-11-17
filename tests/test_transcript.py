@@ -1,8 +1,8 @@
 import unittest
 from datetime import datetime, timezone
 
+from reccap.transcript import is_loggable, read_entries
 from tests.helpers import CWD, assistant, base, text, tool, user, write_transcript
-from worklog.transcript import is_loggable, read_entries
 
 T1 = "2026-11-14T03:42:03.120Z"
 T2 = "2026-11-14T03:42:10.000Z"

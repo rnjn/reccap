@@ -6,10 +6,10 @@ import os
 import re
 from datetime import datetime, timezone
 
-from worklog import config, frontmatter, gitops
-from worklog.describe import describe as describe_with_claude
-from worklog.render import fallback_description, prompts_hash, render_session, session_relpath
-from worklog.transcript import is_loggable, read_entries
+from reccap import config, frontmatter, gitops
+from reccap.describe import describe as describe_with_claude
+from reccap.render import fallback_description, prompts_hash, render_session, session_relpath
+from reccap.transcript import is_loggable, read_entries
 
 LOG_BYTES = 1024 * 1024
 
@@ -47,7 +47,7 @@ def project_folder(path):
 
 
 def _logger(home_dir):
-    log = logging.getLogger("worklog.sync." + home_dir)
+    log = logging.getLogger("reccap.sync." + home_dir)
     log.setLevel(logging.INFO)
     log.propagate = False
     handler = logging.handlers.RotatingFileHandler(os.path.join(home_dir, "sync.log"), maxBytes=LOG_BYTES, backupCount=1)
@@ -98,7 +98,7 @@ def _sync(home_dir, dry_run, no_push, since, out, tz, describe, log):
     committed = False
     if os.path.isdir(os.path.join(vault, folder)):
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        committed = gitops.commit(vault, git_bin, [folder], f"worklog: {machine} {stamp}")
+        committed = gitops.commit(vault, git_bin, [folder], f"reccap: {machine} {stamp}")
     log.info("wrote %d session files, committed=%s", written, committed)
     if no_push or not (committed or gitops.has_unpushed(vault, git_bin)):
         return

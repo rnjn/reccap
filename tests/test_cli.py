@@ -9,8 +9,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class CliTest(SandboxTest):
     def run_cli(self, *args, command=None):
-        env = dict(os.environ, WORKLOG_HOME=self.laptop.home, PYTHONPATH=ROOT, TZ="Asia/Kolkata")
-        command = command or [sys.executable, "-m", "worklog"]
+        env = dict(os.environ, RECCAP_HOME=self.laptop.home, PYTHONPATH=ROOT, TZ="Asia/Kolkata")
+        command = command or [sys.executable, "-m", "reccap"]
         return subprocess.run([*command, *args], check=False, capture_output=True, text=True, env=env, cwd=self.root)
 
     def test_sync_dry_run_prints_the_target_path(self):
@@ -20,7 +20,7 @@ class CliTest(SandboxTest):
 
     def test_sync_no_push_through_the_wrapper_script(self):
         self.laptop.add_transcript(basic_lines())
-        result = self.run_cli("sync", "--no-push", command=[os.path.join(ROOT, "bin", "worklog")])
+        result = self.run_cli("sync", "--no-push", command=[os.path.join(ROOT, "bin", "reccap")])
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.laptop.commits(), 2)
         self.assertNotIn(SESSION_PATH, self.origin_files())
@@ -32,7 +32,7 @@ class CliTest(SandboxTest):
     def test_no_command_prints_usage(self):
         result = self.run_cli()
         self.assertEqual(result.returncode, 2)
-        self.assertIn("usage: worklog", result.stderr)
+        self.assertIn("usage: reccap", result.stderr)
 
     def test_day_writes_the_page_for_the_given_date(self):
         self.laptop.add_transcript(basic_lines())

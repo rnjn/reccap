@@ -2,8 +2,8 @@ import glob
 import os
 import time
 
-from worklog import config, gitops, schedule
-from worklog.describe import ask
+from reccap import config, gitops, schedule
+from reccap.describe import ask
 
 DAY_SECONDS = 24 * 60 * 60
 
@@ -61,7 +61,7 @@ def _unpushed(settings):
     span = f"{upstream}..HEAD" if upstream else "HEAD"
     log = gitops.git(vault, git_bin, "log", span, "--format=%ct %s").stdout
     cutoff = time.time() - DAY_SECONDS
-    old = [line for line in log.splitlines() if line.partition(" ")[2].startswith("worklog:") and int(line.split()[0]) < cutoff]
+    old = [line for line in log.splitlines() if line.partition(" ")[2].startswith("reccap:") and int(line.split()[0]) < cutoff]
     if old:
-        return False, f"{len(old)} worklog commits have waited more than 24 hours"
+        return False, f"{len(old)} reccap commits have waited more than 24 hours"
     return True, "nothing older than 24 hours"

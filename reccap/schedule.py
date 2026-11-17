@@ -5,18 +5,18 @@ import shlex
 import subprocess
 import sys
 
-LABEL = "com.worklog.sync"
-UNIT = "worklog-sync"
-CRON_MARK = "# worklog-sync"
+LABEL = "com.reccap.sync"
+UNIT = "reccap-sync"
+CRON_MARK = "# reccap-sync"
 
 
 def command():
-    return [sys.executable, "-m", "worklog", "sync"]
+    return [sys.executable, "-m", "reccap", "sync"]
 
 
 def environment(home_dir):
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return {"PYTHONPATH": root, "WORKLOG_HOME": home_dir}
+    return {"PYTHONPATH": root, "RECCAP_HOME": home_dir}
 
 
 def launchd_plist(args, env, interval_seconds, log_path):
@@ -33,7 +33,7 @@ def launchd_plist(args, env, interval_seconds, log_path):
 
 
 def systemd_service(args, env):
-    lines = ["[Unit]", "Description=Worklog sync", "", "[Service]", "Type=oneshot"]
+    lines = ["[Unit]", "Description=Reccap sync", "", "[Service]", "Type=oneshot"]
     lines += [f'Environment="{key}={value}"' for key, value in env.items()]
     lines += ["ExecStart=" + " ".join(shlex.quote(a) for a in args), ""]
     return "\n".join(lines)
@@ -41,7 +41,7 @@ def systemd_service(args, env):
 
 def systemd_timer(minutes):
     calendar = "hourly" if minutes == 60 else f"*:0/{minutes}"
-    lines = ["[Unit]", "Description=Worklog sync timer", "", "[Timer]", f"OnCalendar={calendar}", "Persistent=true", ""]
+    lines = ["[Unit]", "Description=Reccap sync timer", "", "[Timer]", f"OnCalendar={calendar}", "Persistent=true", ""]
     lines += ["[Install]", "WantedBy=timers.target", ""]
     return "\n".join(lines)
 

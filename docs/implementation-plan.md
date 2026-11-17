@@ -1,12 +1,12 @@
-# Worklog Implementation Plan
+# Reccap Implementation Plan
 
-**Goal:** A `worklog` CLI that renders Claude Code sessions to markdown in a git-backed Obsidian vault and builds one page per day.
+**Goal:** A `reccap` CLI that renders Claude Code sessions to markdown in a git-backed Obsidian vault and builds one page per day.
 
-**Architecture:** `worklog sync` runs on each machine: parse changed transcripts, render one markdown file per session under `sessions/<machine>/`, commit, push. `worklog day` pulls, reads the session files, writes `daily/<date>.md`. Model calls happen only in sync, for a one-line description.
+**Architecture:** `reccap sync` runs on each machine: parse changed transcripts, render one markdown file per session under `sessions/<machine>/`, commit, push. `reccap day` pulls, reads the session files, writes `daily/<date>.md`. Model calls happen only in sync, for a one-line description.
 
 **Tech Stack:** Python 3.9+, standard library only. External programs: `git`, `claude`. Tests: `unittest`.
 
-**Spec:** `docs/Worklog Claude Code daily activity log — build spec.md`
+**Spec:** `docs/Reccap Claude Code daily activity log — build spec.md`
 
 ## Global Constraints
 
@@ -15,7 +15,7 @@
 - Tests run with no network and no real `claude` binary. Never commit real transcripts.
 - Rendering is deterministic: the same transcript produces the same bytes.
 - Sync never blocks, never prompts, never deletes anything in the vault.
-- Stage only worklog's own paths. Never `git add -A`.
+- Stage only reccap's own paths. Never `git add -A`.
 - No code comments.
 
 ## Decisions that differ from the spec
@@ -27,7 +27,7 @@
 - **Slash-only sessions** with no assistant reply (such as a lone `/exit`) are dropped.
 - **Fallback retry.** State records `description_source`, and a `fallback` session is retried even when its transcript is unchanged.
 - **Stable file name.** State records each session's vault path. With no state, an existing file is found by `<id8>` before a new name is chosen.
-- **`worklog day` runs a sync first**, unless `--no-sync` is given, so the morning machine's own sessions are on the page.
+- **`reccap day` runs a sync first**, unless `--no-sync` is given, so the morning machine's own sessions are on the page.
 
 ## Review Focus
 
@@ -41,16 +41,16 @@
 
 | File | Responsibility |
 | --- | --- |
-| `worklog/transcript.py` | All knowledge of transcript field names. `read_entries(path) -> list[Entry]` |
-| `worklog/render.py` | `render_session(...) -> str`, `fallback_description(entries)`, `prompts_hash(entries)` |
-| `worklog/frontmatter.py` | `dump(pairs) -> str`, `parse(text) -> (dict, body)` |
-| `worklog/config.py` | `home()`, `load_config()`, `save_config()`, `load_state()`, `save_state()` |
-| `worklog/gitops.py` | `publish(vault, paths, message, git_bin, push) -> str`, `pull(vault, git_bin) -> bool` |
-| `worklog/describe.py` | `describe(entries, config, scratch) -> (text, source)` |
-| `worklog/sync.py` | `run_sync(config, dry_run, no_push, since) -> int` |
-| `worklog/day.py` | `build_day(vault, date, git_bin) -> str`, `run_day(...)` |
-| `worklog/install.py`, `worklog/doctor.py` | Setup, scheduling, checks |
-| `worklog/cli.py`, `worklog/__main__.py`, `bin/worklog` | Argument parsing and entry point |
+| `reccap/transcript.py` | All knowledge of transcript field names. `read_entries(path) -> list[Entry]` |
+| `reccap/render.py` | `render_session(...) -> str`, `fallback_description(entries)`, `prompts_hash(entries)` |
+| `reccap/frontmatter.py` | `dump(pairs) -> str`, `parse(text) -> (dict, body)` |
+| `reccap/config.py` | `home()`, `load_config()`, `save_config()`, `load_state()`, `save_state()` |
+| `reccap/gitops.py` | `publish(vault, paths, message, git_bin, push) -> str`, `pull(vault, git_bin) -> bool` |
+| `reccap/describe.py` | `describe(entries, config, scratch) -> (text, source)` |
+| `reccap/sync.py` | `run_sync(config, dry_run, no_push, since) -> int` |
+| `reccap/day.py` | `build_day(vault, date, git_bin) -> str`, `run_day(...)` |
+| `reccap/install.py`, `reccap/doctor.py` | Setup, scheduling, checks |
+| `reccap/cli.py`, `reccap/__main__.py`, `bin/reccap` | Argument parsing and entry point |
 | `Makefile` | `make test`, `make lint` |
 
 ## Tasks
@@ -59,7 +59,7 @@ Each task follows the same cycle: write the failing test, run it and see it fail
 
 ### Task 1: Parser and renderer
 
-**Files:** `worklog/transcript.py`, `worklog/render.py`, `worklog/frontmatter.py`, `tests/test_transcript.py`, `tests/test_render.py`, `tests/fixtures/*.jsonl`, `tests/fixtures/*.md`, `Makefile`
+**Files:** `reccap/transcript.py`, `reccap/render.py`, `reccap/frontmatter.py`, `tests/test_transcript.py`, `tests/test_render.py`, `tests/fixtures/*.jsonl`, `tests/fixtures/*.md`, `Makefile`
 
 **Produces:**
 - `Entry(kind, time, text, tools, cwd, branch)` where `kind` is `prompt`, `assistant`, or `compaction`, `time` is an aware UTC `datetime`, and `tools` is a list of `(name, input_dict)`.
@@ -75,7 +75,7 @@ Each task follows the same cycle: write the failing test, run it and see it fail
 
 ### Task 2: Sync without descriptions
 
-**Files:** `worklog/config.py`, `worklog/gitops.py`, `worklog/sync.py`, `worklog/cli.py`, `worklog/__main__.py`, `bin/worklog`, `tests/test_sync.py`, `tests/test_gitops.py`
+**Files:** `reccap/config.py`, `reccap/gitops.py`, `reccap/sync.py`, `reccap/cli.py`, `reccap/__main__.py`, `bin/reccap`, `tests/test_sync.py`, `tests/test_gitops.py`
 
 - [ ] Discover: one level under the transcript root, skip unchanged by size and mtime, skip the scratch project folder, skip `exclude_cwd_prefixes`.
 - [ ] Write through a temporary file and rename; skip byte-identical content.
@@ -89,7 +89,7 @@ Each task follows the same cycle: write the failing test, run it and see it fail
 
 ### Task 3: Description step
 
-**Files:** `worklog/describe.py`, `worklog/sync.py`, `tests/test_describe.py`, `tests/fake_claude.py`
+**Files:** `reccap/describe.py`, `reccap/sync.py`, `tests/test_describe.py`, `tests/fake_claude.py`
 
 - [ ] Input: prompts cut to 500, last assistant text cut to 1,000, total capped at 8,000 keeping earliest and latest prompts.
 - [ ] Fake `claude` covers success, timeout, and non-zero exit.
@@ -99,16 +99,16 @@ Each task follows the same cycle: write the failing test, run it and see it fail
 
 ### Task 4: Day page
 
-**Files:** `worklog/day.py`, `worklog/cli.py`, `tests/test_day.py`, `tests/fixtures/day/`
+**Files:** `reccap/day.py`, `reccap/cli.py`, `tests/test_day.py`, `tests/fixtures/day/`
 
 - [ ] Golden test against the spec's day page example, including a carried session and the last sync line.
 - [ ] Empty day writes `No sessions recorded.`
-- [ ] Text outside the `worklog:start` and `worklog:end` markers survives a rerun.
+- [ ] Text outside the `reccap:start` and `reccap:end` markers survives a rerun.
 - [ ] `--no-pull`, `--no-push`, `--no-sync`, `--open`.
 
 ### Task 5: Install, scheduling, doctor
 
-**Files:** `worklog/install.py`, `worklog/doctor.py`, `worklog/cli.py`, `tests/test_install.py`, `tests/test_doctor.py`
+**Files:** `reccap/install.py`, `reccap/doctor.py`, `reccap/cli.py`, `tests/test_install.py`, `tests/test_doctor.py`
 
 - [ ] `install` writes `config.json`, `scratch/`, the `.gitignore` lines, and refuses a taken machine name without `--force`.
 - [ ] launchd plist and systemd unit text are generated by pure functions and tested as strings; cron fallback.

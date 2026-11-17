@@ -7,11 +7,11 @@ from datetime import date as date_type
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
-from worklog import config, frontmatter, gitops
-from worklog.sync import run_sync
+from reccap import config, frontmatter, gitops
+from reccap.sync import run_sync
 
-START = "<!-- worklog:start -->"
-END = "<!-- worklog:end -->"
+START = "<!-- reccap:start -->"
+END = "<!-- reccap:end -->"
 HEADING = re.compile(r"^### (\d\d:\d\d) (Prompt|Claude)$")
 
 
@@ -19,7 +19,7 @@ def run_day(home_dir, day=None, no_pull=False, no_push=False, no_sync=False, ope
     settings = config.load_config(home_dir)
     vault, git_bin = settings["vault_path"], settings["git_bin"]
     if not vault or not os.path.isdir(vault):
-        out("vault_path is not configured; run worklog install")
+        out("vault_path is not configured; run reccap install")
         return 1
     if day is None:
         today = today or datetime.now(tz).date()
@@ -37,7 +37,7 @@ def run_day(home_dir, day=None, no_pull=False, no_push=False, no_sync=False, ope
     content = _page(existing, day, sessions, _block(sessions, day, _last_sync(vault, git_bin, tz)))
     if content != existing:
         config.write_atomic(target, content)
-    committed = gitops.commit(vault, git_bin, [relpath], f"worklog: day {day}")
+    committed = gitops.commit(vault, git_bin, [relpath], f"reccap: day {day}")
     if not no_push and (committed or gitops.has_unpushed(vault, git_bin)):
         error = gitops.sync_remote(vault, git_bin)
         if error:

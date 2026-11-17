@@ -1,5 +1,5 @@
 import sys
 
-from worklog.cli import main
+from reccap.cli import main
 
 sys.exit(main())

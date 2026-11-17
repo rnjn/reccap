@@ -4,7 +4,7 @@ A daily recap of your Claude Code sessions, across all your machines, as pages i
 
 Each machine renders its own sessions to markdown and pushes them to a private git repo that is also the vault. One command then builds a page per day that lists every session active that day, grouped by machine and repo, with a link to a readable transcript of each.
 
-The command-line tool is called `worklog`.
+The command-line tool is called `reccap`.
 
 ## What you get
 
@@ -24,9 +24,9 @@ A session page, `sessions/laptop/2026-11/2026-11-14-550e8400.md`, with your prom
 
 ## How it works
 
-- `worklog sync` runs hourly on every machine. It reads the transcripts under `~/.claude/projects/`, renders the ones that changed, asks `claude -p` for a one-line description of each, and commits and pushes them.
+- `reccap sync` runs hourly on every machine. It reads the transcripts under `~/.claude/projects/`, renders the ones that changed, asks `claude -p` for a one-line description of each, and commits and pushes them.
 - Each machine writes only inside `sessions/<machine>/`, so machines never edit the same file.
-- `worklog day` is run by hand. It syncs this machine, pulls the vault, and writes `daily/<date>.md` from every machine's sessions. Notes you add to a day page outside the `worklog:start` and `worklog:end` markers survive a rerun.
+- `reccap day` is run by hand. It syncs this machine, pulls the vault, and writes `daily/<date>.md` from every machine's sessions. Notes you add to a day page outside the `reccap:start` and `reccap:end` markers survive a rerun.
 
 There is no server and no database. Session content is pushed as written, with no redaction, so keep the vault repo private.
 
@@ -43,11 +43,11 @@ Create a private git repo for the vault, once. Then on each machine:
 
 ```sh
 git clone https://github.com/rnjn/reccap.git ~/src/reccap
-~/src/reccap/bin/worklog install --vault ~/vaults/worklog --repo-url <vault repo url> --machine <unique-name>
-ln -s ~/src/reccap/bin/worklog ~/.local/bin/worklog
+~/src/reccap/bin/reccap install --vault ~/vaults/reccap --repo-url <vault repo url> --machine <unique-name>
+ln -s ~/src/reccap/bin/reccap ~/.local/bin/reccap
 ```
 
-`install` clones the vault if the path does not exist, writes `~/.worklog/config.json`, schedules the hourly sync, and runs `worklog doctor`. `--machine` defaults to the short hostname and must be unique across machines.
+`install` clones the vault if the path does not exist, writes `~/.reccap/config.json`, schedules the hourly sync, and runs `reccap doctor`. `--machine` defaults to the short hostname and must be unique across machines.
 
 The schedule is a launchd user agent on macOS and a systemd user timer on Linux, with a crontab entry as the fallback.
 
@@ -55,17 +55,17 @@ The schedule is a launchd user agent on macOS and a systemd user timer on Linux,
 
 | Command | Purpose |
 | --- | --- |
-| `worklog install --vault <path> [--repo-url <url>] [--machine <name>] [--force]` | Set up this machine and schedule sync |
-| `worklog sync [--dry-run] [--no-push] [--since YYYY-MM-DD]` | Render changed sessions and push them |
-| `worklog day [DATE] [--open] [--no-sync] [--no-pull] [--no-push]` | Build the day page; `DATE` defaults to yesterday |
-| `worklog doctor` | Check the setup, one pass or fail line per check |
-| `worklog uninstall` | Remove the schedule; the vault and `~/.worklog/` stay |
+| `reccap install --vault <path> [--repo-url <url>] [--machine <name>] [--force]` | Set up this machine and schedule sync |
+| `reccap sync [--dry-run] [--no-push] [--since YYYY-MM-DD]` | Render changed sessions and push them |
+| `reccap day [DATE] [--open] [--no-sync] [--no-pull] [--no-push]` | Build the day page; `DATE` defaults to yesterday |
+| `reccap doctor` | Check the setup, one pass or fail line per check |
+| `reccap uninstall` | Remove the schedule; the vault and `~/.reccap/` stay |
 
 `--since` reprocesses older transcripts, for backfill. `--open` opens the page in Obsidian.
 
 ## Configuration
 
-Settings live in `~/.worklog/config.json`. `install` writes it, and keeps your edits when run again.
+Settings live in `~/.reccap/config.json`. `install` writes it, and keeps your edits when run again.
 
 | Key | Meaning |
 | --- | --- |
@@ -78,7 +78,7 @@ Settings live in `~/.worklog/config.json`. `install` writes it, and keeps your e
 | `describe_timeout_seconds` | Default 60 |
 | `exclude_cwd_prefixes` | Directories whose sessions are never rendered or pushed |
 
-Local state sits beside it: `state.json`, `sync.log`, and `scratch/`. Set `WORKLOG_HOME` to use a different folder.
+Local state sits beside it: `state.json`, `sync.log`, and `scratch/`. Set `RECCAP_HOME` to use a different folder.
 
 ## Development
 

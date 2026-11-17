@@ -1,10 +1,10 @@
 import os
 import unittest
 
+from reccap import frontmatter
+from reccap.render import fallback_description, prompts_hash, render_session, session_relpath
+from reccap.transcript import read_entries
 from tests.helpers import CWD, FIXTURES, IST, SID, assistant, base, fixture, text, tool, user, write_transcript
-from worklog import frontmatter
-from worklog.render import fallback_description, prompts_hash, render_session, session_relpath
-from worklog.transcript import read_entries
 
 
 def multiday_lines():

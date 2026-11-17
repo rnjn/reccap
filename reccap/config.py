@@ -15,7 +15,7 @@ DEFAULTS = {
 
 
 def home():
-    return os.environ.get("WORKLOG_HOME") or os.path.join(os.path.expanduser("~"), ".worklog")
+    return os.environ.get("RECCAP_HOME") or os.path.join(os.path.expanduser("~"), ".reccap")
 
 
 def scratch(home_dir):
