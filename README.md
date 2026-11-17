@@ -42,7 +42,7 @@ There is no server and no database. Session content is pushed as written, with n
 Create a private git repo for the vault, once. Then on each machine:
 
 ```sh
-git clone https://github.com/rnjn/reccap.git ~/src/reccap
+git clone git@github.com:rnjn/reccap.git ~/src/reccap
 ~/src/reccap/bin/reccap install --vault ~/vaults/reccap --repo-url <vault repo url> --machine <unique-name>
 ln -s ~/src/reccap/bin/reccap ~/.local/bin/reccap
 ```
