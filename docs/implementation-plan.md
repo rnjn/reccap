@@ -1,7 +1,5 @@
 # Worklog Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** A `worklog` CLI that renders Claude Code sessions to markdown in a git-backed Obsidian vault and builds one page per day.
 
 **Architecture:** `worklog sync` runs on each machine: parse changed transcripts, render one markdown file per session under `sessions/<machine>/`, commit, push. `worklog day` pulls, reads the session files, writes `daily/<date>.md`. Model calls happen only in sync, for a one-line description.
