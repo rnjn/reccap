@@ -1,4 +1,8 @@
-# reccap
+<p align="center"><img src="docs/logo.svg" width="96" alt="reccap logo"></p>
+
+<h1 align="center">reccap</h1>
+
+<p align="center"><em>pronounced "recap"</em></p>
 
 A daily recap of your Claude Code sessions, across all your machines, as pages in an Obsidian vault.
 
