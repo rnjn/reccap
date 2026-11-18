@@ -97,3 +97,7 @@ make lint
 ```
 
 Tests use `unittest`, temporary git repos, and a fake `claude` script; they need no network. The build spec and the implementation plan, with the points where the code departs from the spec, are in `docs/`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
